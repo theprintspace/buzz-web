@@ -21,6 +21,10 @@
 	@versionedAssets path /app/assets/*
 	header @versionedAssets Cache-Control "public, max-age=31536000, immutable"
 
+	handle / {
+		redir * /app/ 308
+	}
+
 	handle /app {
 		redir * /app/ 308
 	}

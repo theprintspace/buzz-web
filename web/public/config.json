@@ -1,6 +1,6 @@
 {
-  "communityName": "Buzz",
-  "relayUrl": "ws://localhost:3000",
+  "communityName": "creativehub",
+  "relayUrl": "wss://buzz-relay.creativehub.io",
   "features": {
     "projects": false,
     "forum": false

@@ -1,6 +1,6 @@
 {
-  "communityName": "Buzz",
-  "relayUrl": "wss://buzz.example.com",
+  "communityName": "creativehub",
+  "relayUrl": "wss://buzz-relay.creativehub.io",
   "features": {
     "projects": false,
     "forum": false
