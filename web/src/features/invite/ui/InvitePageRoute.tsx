@@ -30,5 +30,5 @@ export function InvitePageRoute() {
     );
   }
 
-  return <InvitePage code={code} relayUrl={config.relayUrl} />;
+  return <InvitePage code={code} config={config} />;
 }

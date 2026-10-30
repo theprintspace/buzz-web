@@ -20,7 +20,7 @@ async function sha256Hex(value: string): Promise<string> {
 export async function makeNip98AuthHeader(
   url: string,
   method: string,
-  options?: { body?: string; requireNip07?: boolean },
+  options?: { body?: string; requireNip07?: boolean; requireActive?: boolean },
 ): Promise<string> {
   const tags = [
     ["u", url],
@@ -36,7 +36,7 @@ export async function makeNip98AuthHeader(
       tags,
       content: "",
     },
-    { requireNip07: options?.requireNip07 },
+    { requireNip07: options?.requireNip07, requireActive: options?.requireActive },
   );
 
   const json = JSON.stringify(event);

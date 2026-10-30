@@ -1,10 +1,11 @@
-import { X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import * as React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import buzzAppIcon from "@/assets/app-icon@3x.png";
+import { IdentityGate } from "@/features/chat/ui/IdentityGate";
 import { claimInviteInBrowser } from "@/features/invite/invite-api";
-import { relayHttpOrigin } from "@/shared/config/runtime-config";
+import { type RuntimeConfig, relayHttpOrigin } from "@/shared/config/runtime-config";
 import { t } from "@/shared/i18n";
 import {
   BUZZ_RELEASES_URL,
@@ -12,9 +13,11 @@ import {
   detectBuzzDownloadPlatform,
   resolveBuzzDownloadUrlForPlatform,
 } from "@/shared/lib/buzz-download";
+import { getActiveSignerPubkey } from "@/shared/lib/nostr-signer";
 import { useNip07Availability } from "@/shared/lib/use-nip07-availability";
 import { Button } from "@/shared/ui/button";
 
+import { InviteIdentityClaim } from "./InviteIdentityClaim";
 import { InviteJoinPolicyNotice } from "./InviteJoinPolicyNotice";
 
 type JoinPolicy = {
@@ -41,8 +44,8 @@ function inviteClaimErrorMessage(message: string): string {
 }
 
 /** Landing page for a community invite link (`/invite/<code>`). */
-export function InvitePage({ code, relayUrl }: { code: string; relayUrl: string }) {
-  const relay = relayUrl;
+export function InvitePage({ code, config }: { code: string; config: RuntimeConfig }) {
+  const relay = config.relayUrl;
   const relayHttp = relayHttpOrigin(relay);
   const host = relay.replace(/^wss?:\/\//, "");
   const [policy, setPolicy] = React.useState<JoinPolicy | null | undefined>(undefined);
@@ -52,6 +55,7 @@ export function InvitePage({ code, relayUrl }: { code: string; relayUrl: string 
   const [opening, setOpening] = React.useState(false);
   const [joiningBrowser, setJoiningBrowser] = React.useState(false);
   const [browserJoinError, setBrowserJoinError] = React.useState<string | null>(null);
+  const [identityStep, setIdentityStep] = React.useState(false);
   const [downloadUrl, setDownloadUrl] = React.useState(BUZZ_RELEASES_URL);
   const [needsMacChoice, setNeedsMacChoice] = React.useState(false);
   const [showMacChoice, setShowMacChoice] = React.useState(false);
@@ -112,12 +116,20 @@ export function InvitePage({ code, relayUrl }: { code: string; relayUrl: string 
     }
   };
 
+  const browserSigningAvailable = useNip07Availability();
+
   const joinInBrowser = async () => {
     setBrowserJoinError(null);
+    // Without a signing extension or an unlocked identity, create or unlock one
+    // first; the claim then happens inside the identity step.
+    if (!browserSigningAvailable && !getActiveSignerPubkey()) {
+      setIdentityStep(true);
+      return;
+    }
     setJoiningBrowser(true);
     try {
       const receipt = await acceptPolicy();
-      await claimInviteInBrowser(relay, code, receipt);
+      await claimInviteInBrowser(relay, code, receipt, browserSigningAvailable ? "nip07" : "local");
       window.location.assign("/");
     } catch (error) {
       const message = error instanceof Error ? error.message : t("invite.claimFailed");
@@ -127,7 +139,6 @@ export function InvitePage({ code, relayUrl }: { code: string; relayUrl: string 
     }
   };
 
-  const browserSigningAvailable = useNip07Availability();
   const disabled =
     policy === undefined ||
     opening ||
@@ -171,6 +182,37 @@ export function InvitePage({ code, relayUrl }: { code: string; relayUrl: string 
     return () => window.document.removeEventListener("keydown", closeOnEscape);
   }, [closeMacChoice, showMacChoice]);
 
+  if (identityStep) {
+    return (
+      <div className="relative">
+        <div className="buzz-app-surface px-4 pt-6 text-center">
+          <div className="mx-auto max-w-[440px] space-y-3">
+            <button
+              className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground"
+              type="button"
+              onClick={() => setIdentityStep(false)}
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" /> {t("invite.backToInvite")}
+            </button>
+            <p className="text-sm text-muted-foreground">{t("invite.identityIntro")}</p>
+          </div>
+        </div>
+        <IdentityGate config={config}>
+          {() => (
+            <InviteIdentityClaim
+              acceptPolicy={acceptPolicy}
+              code={code}
+              communityName={config.communityName}
+              mapError={inviteClaimErrorMessage}
+              relayUrl={relay}
+              onBack={() => setIdentityStep(false)}
+            />
+          )}
+        </IdentityGate>
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex flex-1 flex-col items-center justify-center px-4 py-16 text-center"
@@ -210,23 +252,17 @@ export function InvitePage({ code, relayUrl }: { code: string; relayUrl: string 
           </div>
 
           <div className="mt-9 w-full max-w-md space-y-2">
-            {browserSigningAvailable ? (
-              <Button
-                className="h-10 w-full bg-black text-white hover:bg-black/90 focus-visible:ring-black disabled:cursor-not-allowed disabled:bg-black/30 disabled:text-white/70"
-                disabled={disabled}
-                onClick={joinInBrowser}
-              >
-                {joiningBrowser ? t("invite.joining") : t("invite.joinBrowser")}
-              </Button>
-            ) : null}
+            <Button
+              className="h-10 w-full bg-black text-white hover:bg-black/90 focus-visible:ring-black disabled:cursor-not-allowed disabled:bg-black/30 disabled:text-white/70"
+              disabled={disabled}
+              onClick={joinInBrowser}
+            >
+              {joiningBrowser ? t("invite.joining") : t("invite.joinBrowser")}
+            </Button>
             {policy === null ? (
               <Button
                 asChild
-                className={`h-10 w-full ${
-                  browserSigningAvailable
-                    ? "border border-black bg-white text-black hover:bg-black/5"
-                    : "bg-black text-white hover:bg-black/90 focus-visible:ring-black"
-                }`}
+                className="h-10 w-full border border-black bg-white text-black hover:bg-black/5"
               >
                 <a
                   href={`buzz://join?relay=${encodeURIComponent(relay)}&code=${encodeURIComponent(code)}`}
@@ -236,11 +272,7 @@ export function InvitePage({ code, relayUrl }: { code: string; relayUrl: string 
               </Button>
             ) : (
               <Button
-                className={`h-10 w-full disabled:cursor-not-allowed disabled:bg-black/30 disabled:text-white/70 ${
-                  browserSigningAvailable
-                    ? "border border-black bg-white text-black hover:bg-black/5"
-                    : "bg-black text-white hover:bg-black/90 focus-visible:ring-black"
-                }`}
+                className="h-10 w-full border border-black bg-white text-black hover:bg-black/5 disabled:cursor-not-allowed disabled:bg-black/30 disabled:text-white/70"
                 disabled={disabled}
                 onClick={openInvite}
               >

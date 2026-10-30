@@ -10,10 +10,17 @@ export type BrowserInviteClaim = {
   role: string;
 };
 
+/**
+ * Which key signs the claim: the NIP-07 browser extension, or the identity the
+ * visitor created or unlocked on this device (never a throwaway key).
+ */
+export type InviteClaimSigner = "nip07" | "local";
+
 export async function claimInviteInBrowser(
   relayUrl: string,
   code: string,
   policyReceipt?: string,
+  signer: InviteClaimSigner = "nip07",
 ): Promise<BrowserInviteClaim> {
   const url = `${relayHttpOrigin(relayUrl)}/api/invites/claim`;
   const body = JSON.stringify({
@@ -22,7 +29,8 @@ export async function claimInviteInBrowser(
   });
   const authorization = await makeNip98AuthHeader(url, "POST", {
     body,
-    requireNip07: true,
+    requireNip07: signer === "nip07",
+    requireActive: signer === "local",
   });
   const response = await fetch(url, {
     method: "POST",
