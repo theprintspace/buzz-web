@@ -237,6 +237,63 @@ const messages = {
   "inbox.unreadCount": { en: "{count} unread", "zh-CN": "{count} 条未读" },
   "inbox.unreadOnly": { en: "Unread only", "zh-CN": "仅未读" },
   "invite.addMember": { en: "Add member", "zh-CN": "添加成员" },
+  "notifications.denied": {
+    en: "Notifications are blocked for this site. Allow them in your browser's site settings, then reload the page.",
+    "zh-CN": "此站点的通知已被阻止。请在浏览器的站点设置中允许通知，然后重新加载页面。",
+  },
+  "notifications.dm": { en: "Direct message from {name}", "zh-CN": "来自 {name} 的私信" },
+  "notifications.disabled": { en: "Off", "zh-CN": "已关闭" },
+  "notifications.enable": { en: "Turn on notifications", "zh-CN": "开启通知" },
+  "notifications.enabled": { en: "On", "zh-CN": "已开启" },
+  "notifications.intro": {
+    en: "Get a browser notification for new mentions, direct messages and thread replies while this tab is in the background. The unread count also shows in the tab title.",
+    "zh-CN":
+      "当此标签页处于后台时，收到新的提及、私信和线程回复会弹出浏览器通知。标签页标题也会显示未读数量。",
+  },
+  "notifications.mention": {
+    en: "{name} mentioned you in #{channel}",
+    "zh-CN": "{name} 在 #{channel} 提到了你",
+  },
+  "notifications.mentionNoChannel": { en: "{name} mentioned you", "zh-CN": "{name} 提到了你" },
+  "notifications.needsAction": { en: "{name} needs your response", "zh-CN": "{name} 需要你的回应" },
+  "notifications.notGranted": {
+    en: "The browser did not allow notifications.",
+    "zh-CN": "浏览器未允许通知。",
+  },
+  "notifications.promptAccept": { en: "Turn on", "zh-CN": "开启" },
+  "notifications.promptBody": {
+    en: "Get told about mentions and direct messages while this tab is in the background.",
+    "zh-CN": "当此标签页处于后台时，收到提及和私信会通知你。",
+  },
+  "notifications.promptTitle": {
+    en: "Turn on browser notifications?",
+    "zh-CN": "开启浏览器通知？",
+  },
+  "notifications.scope": {
+    en: "Notifications arrive only while Buzz is open in a tab. Each browser keeps its own setting.",
+    "zh-CN": "仅当 Buzz 在某个标签页中打开时才会收到通知。每个浏览器的设置各自独立。",
+  },
+  "notifications.summary": {
+    en: "{count} new messages in Buzz",
+    "zh-CN": "Buzz 中有 {count} 条新消息",
+  },
+  "notifications.summaryBody": {
+    en: "Open the inbox to see them.",
+    "zh-CN": "打开收件箱查看。",
+  },
+  "notifications.thread": {
+    en: "{name} replied in #{channel}",
+    "zh-CN": "{name} 在 #{channel} 回复了",
+  },
+  "notifications.threadNoChannel": {
+    en: "{name} replied to a thread",
+    "zh-CN": "{name} 回复了一个线程",
+  },
+  "notifications.toggle": { en: "Browser notifications", "zh-CN": "浏览器通知" },
+  "notifications.unsupported": {
+    en: "This browser does not support notifications.",
+    "zh-CN": "此浏览器不支持通知。",
+  },
   "invite.acceptInBuzz": { en: "Accept invite in Buzz", "zh-CN": "在 Buzz 中接受邀请" },
   "invite.ageAgreement": {
     en: "I am 18 years of age or older.",
@@ -509,6 +566,7 @@ const messages = {
   "settings.editProfile": { en: "Edit profile", "zh-CN": "编辑 Profile" },
   "settings.identity": { en: "Identity", "zh-CN": "身份" },
   "settings.invites": { en: "Invites", "zh-CN": "邀请" },
+  "settings.notifications": { en: "Notifications", "zh-CN": "通知" },
   "settings.invitesUnavailable": {
     en: "Only Relay owners and admins can invite people.",
     "zh-CN": "只有 Relay owner/admin 可以邀请成员。",

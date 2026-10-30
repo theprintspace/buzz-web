@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Bell,
   Download,
   KeyRound,
   LoaderCircle,
@@ -15,13 +16,14 @@ import type { UserProfile } from "@/features/chat/lib/chat-types";
 import { connectionStateLabel } from "@/features/chat/lib/connection-state";
 import { DialogFrame } from "@/features/chat/ui/AppDialogs";
 import { Avatar } from "@/features/chat/ui/Avatar";
+import type { NotificationSettings } from "@/features/inbox/use-browser-notifications";
 import type { RelayConnectionState } from "@/shared/api/nostr-types";
 import { t } from "@/shared/i18n";
 import { downloadIdentityBackup } from "@/shared/lib/identity-backup";
 import { createActiveIdentityBackup, getActiveSignerMode } from "@/shared/lib/nostr-signer";
 import { useTheme } from "@/shared/theme/ThemeProvider";
 
-export type SettingsSection = "appearance" | "identity" | "invites" | "profile";
+export type SettingsSection = "appearance" | "identity" | "invites" | "notifications" | "profile";
 
 function ProfileEditor({
   profile,
@@ -130,6 +132,80 @@ function AppearanceSection() {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function NotificationsSection({ notifications }: { notifications: NotificationSettings }) {
+  const { supported, permission, enabled, enable, disable } = notifications;
+  const [requesting, setRequesting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const requestPermission = async () => {
+    setRequesting(true);
+    setNotice(null);
+    try {
+      const granted = await enable();
+      if (!granted) setNotice(t("notifications.notGranted"));
+    } finally {
+      setRequesting(false);
+    }
+  };
+  return (
+    <div className="max-w-2xl">
+      <h2 className="text-xl font-semibold">{t("settings.notifications")}</h2>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{t("notifications.intro")}</p>
+      <section className="mt-6 border-y py-5">
+        {!supported ? (
+          <p className="text-sm text-muted-foreground">{t("notifications.unsupported")}</p>
+        ) : permission === "denied" ? (
+          <p className="text-sm text-muted-foreground">{t("notifications.denied")}</p>
+        ) : permission === "granted" ? (
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Bell className="h-4 w-4" /> {t("notifications.toggle")}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {enabled ? t("notifications.enabled") : t("notifications.disabled")}
+              </p>
+            </div>
+            <button
+              aria-checked={enabled}
+              aria-label={t("notifications.toggle")}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
+                enabled ? "border-primary bg-primary" : "border-foreground/20 bg-foreground/15"
+              }`}
+              role="switch"
+              type="button"
+              onClick={() => (enabled ? disable() : void requestPermission())}
+            >
+              <span
+                className={`inline-block h-4.5 w-4.5 rounded-full bg-background shadow transition-transform ${
+                  enabled ? "translate-x-[22px]" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+        ) : (
+          <div>
+            <button
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
+              disabled={requesting}
+              type="button"
+              onClick={() => void requestPermission()}
+            >
+              {requesting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Bell className="h-4 w-4" />
+              )}
+              {t("notifications.enable")}
+            </button>
+            {notice ? <p className="mt-3 text-xs text-destructive">{notice}</p> : null}
+          </div>
+        )}
+      </section>
+      <p className="mt-4 text-xs leading-5 text-muted-foreground">{t("notifications.scope")}</p>
     </div>
   );
 }
@@ -262,6 +338,7 @@ export function SettingsView({
   profile,
   connectionState,
   canInvite,
+  notifications,
   onClose,
   onOpenInvites,
   onSwitchIdentity,
@@ -272,6 +349,7 @@ export function SettingsView({
   profile: UserProfile;
   connectionState: RelayConnectionState;
   canInvite: boolean;
+  notifications: NotificationSettings;
   onClose: () => void;
   onOpenInvites: () => void;
   onSwitchIdentity: () => void;
@@ -282,6 +360,7 @@ export function SettingsView({
   const sections = [
     { id: "profile", label: t("profile.title"), icon: UserRound },
     { id: "appearance", label: t("dialog.appearance"), icon: Monitor },
+    { id: "notifications", label: t("settings.notifications"), icon: Bell },
     { id: "invites", label: t("settings.invites"), icon: UserRoundPlus },
     { id: "identity", label: t("settings.identity"), icon: KeyRound },
   ] as const;
@@ -344,6 +423,8 @@ export function SettingsView({
           </div>
         ) : section === "appearance" ? (
           <AppearanceSection />
+        ) : section === "notifications" ? (
+          <NotificationsSection notifications={notifications} />
         ) : section === "invites" ? (
           <div className="max-w-2xl">
             <h2 className="text-xl font-semibold">{t("settings.invites")}</h2>

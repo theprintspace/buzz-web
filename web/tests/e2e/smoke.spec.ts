@@ -1418,3 +1418,54 @@ test("invite joins in the browser by creating an identity when no extension is i
   await expect(page).toHaveURL("/");
   expect(claimedPubkey).toMatch(/^[0-9a-f]{64}$/);
 });
+
+async function fakeNotificationApi(page: Page) {
+  await page.addInitScript(() => {
+    const permissionKey = "e2e:notification-permission";
+    class FakeNotification {
+      static get permission(): string {
+        return localStorage.getItem(permissionKey) ?? "default";
+      }
+      static async requestPermission(): Promise<string> {
+        localStorage.setItem(permissionKey, "granted");
+        return "granted";
+      }
+      onclick: (() => void) | null = null;
+      constructor(
+        public readonly title: string,
+        public readonly options?: { body?: string },
+      ) {}
+      close(): void {}
+    }
+    Object.defineProperty(window, "Notification", { configurable: true, value: FakeNotification });
+  });
+}
+
+test("Settings offer browser notifications and the tab title carries the unread count", async ({
+  page,
+}) => {
+  await fakeNotificationApi(page);
+  await enableDemo(page);
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Profile menu" })).toBeVisible();
+  await expect(page.getByText("Turn on browser notifications?")).toBeVisible();
+  await expect(page).toHaveTitle(/^(\(\d+\) )?Buzz Web$/);
+
+  await page.waitForTimeout(100);
+  await page.keyboard.press("Control+,");
+  const settings = page.getByTestId("workspace-tool-settings");
+  await settings.getByRole("button", { name: "Notifications" }).click();
+  await settings.getByRole("button", { name: "Turn on notifications" }).click();
+  const toggle = settings.getByRole("switch", { name: "Browser notifications" });
+  await expect(toggle).toBeChecked();
+  await toggle.click();
+  await expect(toggle).not.toBeChecked();
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Profile menu" })).toBeVisible();
+  await expect(page.getByText("Turn on browser notifications?")).toHaveCount(0);
+  await page.waitForTimeout(100);
+  await page.keyboard.press("Control+,");
+  await settings.getByRole("button", { name: "Notifications" }).click();
+  await expect(settings.getByRole("switch", { name: "Browser notifications" })).not.toBeChecked();
+});

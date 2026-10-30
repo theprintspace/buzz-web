@@ -38,6 +38,7 @@ import { addCommunityMember, mintCommunityInvite } from "@/features/community/in
 import { CommunityInviteDialog } from "@/features/community/ui/CommunityInviteDialog";
 import type { InboxItem } from "@/features/inbox/lib/inbox-model";
 import { InboxView } from "@/features/inbox/ui/InboxView";
+import { useBrowserNotifications } from "@/features/inbox/use-browser-notifications";
 import { useInbox } from "@/features/inbox/use-inbox";
 import { ReposPanel } from "@/features/repos/ui/ReposPanel";
 import { clearMediaObjectUrls } from "@/shared/api/media-client";
@@ -294,6 +295,33 @@ function Workspace({
     if (!item.channelId) return;
     revealMessage(item.channelId, item.event.id, item.threadRootId);
   };
+  const notifications = useBrowserNotifications({
+    items: inbox.items,
+    unreadCount: inbox.unreadCount,
+    loading: inbox.loading,
+    currentPubkey: pubkey,
+    profiles: state.profiles,
+    channels: state.channels,
+    icon: buzzAppIcon,
+    onOpen: openInboxConversation,
+  });
+  const {
+    shouldPrompt: shouldPromptNotifications,
+    dismissPrompt: dismissNotificationPrompt,
+    enable: enableNotifications,
+  } = notifications;
+  useEffect(() => {
+    if (!shouldPromptNotifications) return;
+    dismissNotificationPrompt();
+    toast(t("notifications.promptTitle"), {
+      description: t("notifications.promptBody"),
+      duration: 20_000,
+      action: {
+        label: t("notifications.promptAccept"),
+        onClick: () => void enableNotifications(),
+      },
+    });
+  }, [dismissNotificationPrompt, enableNotifications, shouldPromptNotifications]);
   const openAgentDm = async (targetPubkey: string) => {
     try {
       await session.openDm(targetPubkey);
@@ -652,6 +680,7 @@ function Workspace({
               <SettingsView
                 canInvite={canCreateChannel}
                 connectionState={state.connectionState}
+                notifications={notifications}
                 profile={
                   state.profiles[pubkey] ?? {
                     pubkey,
