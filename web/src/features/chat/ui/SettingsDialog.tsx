@@ -7,6 +7,7 @@ import {
   Monitor,
   Moon,
   Pencil,
+  Smartphone,
   Sun,
   UserRound,
   UserRoundPlus,
@@ -17,13 +18,20 @@ import { connectionStateLabel } from "@/features/chat/lib/connection-state";
 import { DialogFrame } from "@/features/chat/ui/AppDialogs";
 import { Avatar } from "@/features/chat/ui/Avatar";
 import type { NotificationSettings } from "@/features/inbox/use-browser-notifications";
+import { PhonePairingSection } from "@/features/pairing/ui/PhonePairingSection";
 import type { RelayConnectionState } from "@/shared/api/nostr-types";
 import { t } from "@/shared/i18n";
 import { downloadIdentityBackup } from "@/shared/lib/identity-backup";
 import { createActiveIdentityBackup, getActiveSignerMode } from "@/shared/lib/nostr-signer";
 import { useTheme } from "@/shared/theme/ThemeProvider";
 
-export type SettingsSection = "appearance" | "identity" | "invites" | "notifications" | "profile";
+export type SettingsSection =
+  | "appearance"
+  | "identity"
+  | "invites"
+  | "mobile"
+  | "notifications"
+  | "profile";
 
 function ProfileEditor({
   profile,
@@ -339,6 +347,7 @@ export function SettingsView({
   connectionState,
   canInvite,
   notifications,
+  pairingRelayUrl,
   onClose,
   onOpenInvites,
   onSwitchIdentity,
@@ -350,6 +359,7 @@ export function SettingsView({
   connectionState: RelayConnectionState;
   canInvite: boolean;
   notifications: NotificationSettings;
+  pairingRelayUrl: string | null;
   onClose: () => void;
   onOpenInvites: () => void;
   onSwitchIdentity: () => void;
@@ -361,6 +371,7 @@ export function SettingsView({
     { id: "profile", label: t("profile.title"), icon: UserRound },
     { id: "appearance", label: t("dialog.appearance"), icon: Monitor },
     { id: "notifications", label: t("settings.notifications"), icon: Bell },
+    { id: "mobile", label: t("settings.mobile"), icon: Smartphone },
     { id: "invites", label: t("settings.invites"), icon: UserRoundPlus },
     { id: "identity", label: t("settings.identity"), icon: KeyRound },
   ] as const;
@@ -425,6 +436,8 @@ export function SettingsView({
           <AppearanceSection />
         ) : section === "notifications" ? (
           <NotificationsSection notifications={notifications} />
+        ) : section === "mobile" ? (
+          <PhonePairingSection pairingRelayUrl={pairingRelayUrl} relayUrl={relayUrl} />
         ) : section === "invites" ? (
           <div className="max-w-2xl">
             <h2 className="text-xl font-semibold">{t("settings.invites")}</h2>

@@ -681,6 +681,7 @@ function Workspace({
                 canInvite={canCreateChannel}
                 connectionState={state.connectionState}
                 notifications={notifications}
+                pairingRelayUrl={config.pairingRelayUrl}
                 profile={
                   state.profiles[pubkey] ?? {
                     pubkey,

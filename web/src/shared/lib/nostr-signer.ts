@@ -1,4 +1,4 @@
-import { decode } from "nostr-tools/nip19";
+import { decode, nsecEncode } from "nostr-tools/nip19";
 import {
   getConversationKey,
   decrypt as nip44Decrypt,
@@ -196,6 +196,18 @@ export function createActiveIdentityBackup(password: string): string {
     throw new Error(t("error.backupLocalOnly"));
   }
   return createIdentityBackup(activeSecretKey, password);
+}
+
+/**
+ * The active local identity as the Buzz phone app expects it (hex pubkey plus
+ * bech32 nsec). Only for the NIP-AB hand-off; the caller drops the strings as
+ * soon as they are encrypted. Extension-held identities cannot be exported.
+ */
+export function exportActiveIdentity(): { pubkey: string; nsec: string } {
+  if (activeMode !== "local" || !activeSecretKey || !activePubkey) {
+    throw new Error(t("error.backupLocalOnly"));
+  }
+  return { pubkey: activePubkey, nsec: nsecEncode(activeSecretKey) };
 }
 
 export function createIdentityBackup(secretKey: Uint8Array, password: string): string {

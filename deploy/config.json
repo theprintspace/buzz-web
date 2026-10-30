@@ -1,6 +1,7 @@
 {
   "communityName": "creativehub",
   "relayUrl": "wss://buzz-relay.creativehub.io",
+  "pairingRelayUrl": "wss://pairing.buzz.xyz",
   "features": {
     "projects": false,
     "forum": false

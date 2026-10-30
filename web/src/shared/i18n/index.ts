@@ -836,6 +836,99 @@ const messages = {
     en: "Failed to load Web configuration ({status})",
     "zh-CN": "无法加载 Web 配置 ({status})",
   },
+  "settings.mobile": { en: "Mobile app", "zh-CN": "手机应用" },
+  "pairing.intro": {
+    en: "Sign in to the Buzz app on your phone with the identity you use here. The hand-off goes straight from this browser to your phone, end-to-end encrypted, and is confirmed with a six-digit code.",
+    "zh-CN":
+      "用你在这里使用的身份登录手机上的 Buzz 应用。身份直接从此浏览器端到端加密传给手机，并用六位数字码确认。",
+  },
+  "pairing.getApp": { en: "Get the app:", "zh-CN": "下载应用：" },
+  "pairing.iphone": { en: "iPhone", "zh-CN": "iPhone" },
+  "pairing.android": { en: "Android", "zh-CN": "Android" },
+  "pairing.extensionOnly": {
+    en: "Your identity is held by a browser extension, so this page cannot send it to a phone. Export the key from the extension and import it in the Buzz app instead.",
+    "zh-CN":
+      "你的身份由浏览器扩展保管，此页面无法将其发送到手机。请从扩展导出密钥，再在 Buzz 应用中导入。",
+  },
+  "pairing.start": { en: "Start pairing", "zh-CN": "开始配对" },
+  "pairing.starting": { en: "Preparing a pairing code…", "zh-CN": "正在准备配对码…" },
+  "pairing.qrTitle": { en: "Pairing QR code", "zh-CN": "配对二维码" },
+  "pairing.copyLink": { en: "Copy pairing link", "zh-CN": "复制配对链接" },
+  "pairing.copyFailed": { en: "Could not copy the link.", "zh-CN": "无法复制链接。" },
+  "pairing.codeLabel": { en: "Confirmation code {code}", "zh-CN": "确认码 {code}" },
+  "pairing.codesMatch": { en: "Codes match", "zh-CN": "两边一致" },
+  "pairing.transferring": { en: "Pairing your phone…", "zh-CN": "正在配对手机…" },
+  "pairing.done": { en: "Paired", "zh-CN": "已配对" },
+  "pairing.expired": { en: "The pairing code expired.", "zh-CN": "配对码已过期。" },
+  "pairing.sentUnconfirmed": {
+    en: "The identity was sent, but your phone did not confirm. Check the phone; if it is still waiting, start again.",
+    "zh-CN": "身份已发送，但手机没有确认。请查看手机；如果仍在等待，请重新开始。",
+  },
+  "pairing.newCode": { en: "New code", "zh-CN": "新配对码" },
+  "pairing.tryAgain": { en: "Try again", "zh-CN": "重试" },
+  "pairing.errorRelay": {
+    en: "Could not reach the pairing relay. Check your connection and try again.",
+    "zh-CN": "无法连接配对中继。请检查网络后重试。",
+  },
+  "pairing.errorLost": {
+    en: "Lost the connection to the pairing relay. Try again.",
+    "zh-CN": "与配对中继的连接已断开。请重试。",
+  },
+  "pairing.errorStopped": { en: "Pairing stopped: {reason}.", "zh-CN": "配对已停止：{reason}。" },
+  "pairing.errorImport": {
+    en: "Your phone could not save the identity. Try again.",
+    "zh-CN": "手机无法保存身份。请重试。",
+  },
+  "pairing.errorCodes": {
+    en: "Too many wrong codes. Start again with a new code.",
+    "zh-CN": "错误次数过多。请用新配对码重新开始。",
+  },
+  "pairing.errorVersion": {
+    en: "The Buzz app on your phone uses a newer pairing version than this site supports.",
+    "zh-CN": "手机上的 Buzz 应用使用了比本站更新的配对版本。",
+  },
+  "pairing.reasonMismatch": { en: "the codes did not match", "zh-CN": "两边的码不一致" },
+  "pairing.reasonDenied": { en: "your phone declined", "zh-CN": "手机拒绝了配对" },
+  "pairing.reasonTimeout": { en: "your phone timed out", "zh-CN": "手机已超时" },
+  "pairing.reasonProtocol": { en: "the phone reported an error", "zh-CN": "手机报告了错误" },
+  "pairing.step1Title": { en: "Scan the QR code", "zh-CN": "扫描二维码" },
+  "pairing.step1Body": {
+    en: "Open Buzz on your phone, choose Scan QR code, and point the camera at this screen.",
+    "zh-CN": "在手机上打开 Buzz，选择“扫描二维码”，并将摄像头对准此屏幕。",
+  },
+  "pairing.step2CodeTitle": { en: "Enter the code on your phone", "zh-CN": "在手机上输入配对码" },
+  "pairing.step2CodeBody": {
+    en: "Type the six-digit code shown here into the Buzz app on your phone.",
+    "zh-CN": "将此处显示的六位数字码输入手机上的 Buzz 应用。",
+  },
+  "pairing.step2SasTitle": { en: "Confirm the code", "zh-CN": "确认配对码" },
+  "pairing.step2SasBody": {
+    en: "Check that the six-digit code matches on both screens, then confirm it here.",
+    "zh-CN": "确认两个屏幕上的六位数字码一致，然后在此确认。",
+  },
+  "pairing.step3Title": { en: "Paired", "zh-CN": "已配对" },
+  "pairing.step3Body": {
+    en: "Your phone is signed in with this identity and connected to the community.",
+    "zh-CN": "手机已使用此身份登录并连接到社区。",
+  },
+  "pairing.step3PendingTitle": { en: "Finish on your phone", "zh-CN": "在手机上完成" },
+  "pairing.step3PendingBody": {
+    en: "Your phone takes it from here.",
+    "zh-CN": "剩下的步骤在手机上完成。",
+  },
+  "pairing.statusEnterCode": {
+    en: "Code {code} ready. Enter it in the Buzz app on your phone.",
+    "zh-CN": "配对码 {code} 已就绪。请在手机上的 Buzz 应用中输入。",
+  },
+  "pairing.statusCompareCode": {
+    en: "Code {code} ready. Check that it matches on your phone, then confirm.",
+    "zh-CN": "配对码 {code} 已就绪。请确认手机上显示一致，然后确认。",
+  },
+  "pairing.relayNote": {
+    en: "Pairing messages travel through {relay}, which only sees throwaway keys and encrypted data.",
+    "zh-CN": "配对消息经由 {relay} 传输，它只能看到一次性密钥和加密数据。",
+  },
+  "pairing.relayDefault": { en: "the pairing relay", "zh-CN": "配对中继" },
 } as const;
 
 export type MessageKey = keyof typeof messages;

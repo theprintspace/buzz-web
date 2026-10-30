@@ -10,6 +10,8 @@ export type ConfiguredAgent = {
 export type RuntimeConfig = {
   communityName: string;
   relayUrl: string;
+  /** Dedicated NIP-AB pairing relay for the phone hand-off; null means ask the relay's NIP-11, then Block's. */
+  pairingRelayUrl: string | null;
   agents: ConfiguredAgent[];
   agentControlUrl: string | null;
   features: RelayFeatureState;
@@ -34,6 +36,11 @@ export function normalizeRelayUrl(value: unknown): string {
     throw new Error(t("error.relayUrlProtocol"));
   }
   return url.toString().replace(/\/$/, "");
+}
+
+export function normalizeOptionalRelayUrl(value: unknown): string | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  return normalizeRelayUrl(value);
 }
 
 function normalizeAgentControlUrl(value: unknown): string | null {
@@ -76,6 +83,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         ? raw.communityName.trim()
         : "Buzz",
     relayUrl: normalizeRelayUrl(raw.relayUrl),
+    pairingRelayUrl: normalizeOptionalRelayUrl(raw.pairingRelayUrl),
     agents,
     agentControlUrl: normalizeAgentControlUrl(raw.agentControlUrl),
     features: parseRelayFeatures(raw.features),

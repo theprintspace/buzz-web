@@ -1,16 +1,30 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { expect, type Page, test } from "@playwright/test";
+import { bytesToHex } from "@noble/hashes/utils.js";
+import { expect, type Page, test, type WebSocketRoute } from "@playwright/test";
+import { decode as decodeNip19 } from "nostr-tools/nip19";
 import {
   type EventTemplate,
   finalizeEvent,
   generateSecretKey,
   getPublicKey,
 } from "nostr-tools/pure";
+import {
+  buildPairingEvent,
+  decodePairingUri,
+  decryptPairingMessage,
+  deriveSas,
+  deriveSessionId,
+  deriveTranscriptHash,
+  ecdhSharedX,
+  type PairingEvent,
+  type PairingMessage,
+} from "../../src/features/pairing/lib/nip-ab";
 
 const DEMO_CONFIG = {
   communityName: "Buzz Community",
   relayUrl: "wss://relay.example.com",
+  pairingRelayUrl: "wss://pairing.example.com",
   agentControlUrl: "https://buzz.example.com/app/api/agent-control",
   features: { projects: true, forum: true },
   demoMode: true,
@@ -1468,4 +1482,154 @@ test("Settings offer browser notifications and the tab title carries the unread 
   await page.keyboard.press("Control+,");
   await settings.getByRole("button", { name: "Notifications" }).click();
   await expect(settings.getByRole("switch", { name: "Browser notifications" })).not.toBeChecked();
+});
+
+// TPS fork: a member who only has the browser (no desktop app) signs the Buzz
+// phone app in from Settings → Mobile app. The test plays the phone against a
+// fake pairing relay: scan the QR, get the typed-code challenge, guess wrong
+// once, type the right code, receive the encrypted identity, confirm.
+test("Settings pair the phone app with a QR code, a typed code and an encrypted hand-off", async ({
+  page,
+}) => {
+  const phoneInbox: PairingEvent[] = [];
+  let pairingSocket: WebSocketRoute | null = null;
+  let claimedPubkey = "";
+  await page.routeWebSocket(/.*/, (ws) => {
+    if (new URL(ws.url()).host !== "pairing.example.com") return;
+    pairingSocket = ws;
+    ws.onMessage((raw) => {
+      const frame = JSON.parse(String(raw)) as unknown[];
+      if (frame[0] === "REQ") ws.send(JSON.stringify(["EOSE", frame[1]]));
+      if (frame[0] === "EVENT") {
+        const event = frame[1] as PairingEvent;
+        phoneInbox.push(event);
+        ws.send(JSON.stringify(["OK", event.id, true, ""]));
+      }
+    });
+  });
+  await page.route("**/api/join-policy", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
+  );
+  await page.route("**/api/invites/claim", async (route) => {
+    const authorization = route.request().headers().authorization ?? "";
+    const event = JSON.parse(
+      Buffer.from(authorization.slice("Nostr ".length), "base64").toString("utf8"),
+    ) as { pubkey: string };
+    claimedPubkey = event.pubkey;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "joined", community_id: "c", host: "x", role: "member" }),
+    });
+  });
+  // Not the demo: the demo identity is fake, and pairing needs a real local key.
+  await page.route("**/config.json", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...DEMO_CONFIG, demoMode: false, agents: [] }),
+    }),
+  );
+
+  await page.goto("/invite/local-code");
+  await page.getByRole("button", { name: "Join in browser" }).click();
+  await page.getByRole("button", { name: "Create" }).click();
+  await page.getByLabel("New vault passphrase").fill("correct horse battery");
+  await page.getByLabel("Confirm passphrase").fill("correct horse battery");
+  await page.getByLabel(/I understand that Buzz cannot recover/).check();
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page).toHaveURL("/");
+  expect(claimedPubkey).toMatch(/^[0-9a-f]{64}$/);
+
+  await expect(page.getByRole("button", { name: "Profile menu" })).toBeVisible();
+  await page.waitForTimeout(100);
+  await page.keyboard.press("Control+,");
+  const settings = page.getByTestId("workspace-tool-settings");
+  await settings.getByRole("button", { name: "Mobile app" }).click();
+  await expect(settings.getByRole("link", { name: "iPhone" })).toHaveAttribute(
+    "href",
+    "https://apps.apple.com/app/id6779728271",
+  );
+  await settings.getByRole("button", { name: "Start pairing" }).click();
+
+  const qr = settings.getByTestId("pairing-qr");
+  await expect(qr).toBeVisible();
+  const decoded = decodePairingUri((await qr.getAttribute("data-pairing-uri")) ?? "");
+  if (!decoded) throw new Error("the QR code does not carry a nostrpair URI");
+  expect(decoded.relays).toEqual(["wss://pairing.example.com"]);
+
+  const phoneSecret = generateSecretKey();
+  const phonePubkey = getPublicKey(phoneSecret);
+  const sessionId = deriveSessionId(decoded.sessionSecret);
+  const sas = deriveSas(ecdhSharedX(phoneSecret, decoded.sourcePubkey), decoded.sessionSecret);
+  const phoneSend = (message: PairingMessage) => {
+    const event = buildPairingEvent(phoneSecret, decoded.sourcePubkey, message);
+    pairingSocket?.send(JSON.stringify(["EVENT", "pair", event]));
+  };
+  const phoneRead = async (index: number): Promise<PairingMessage> => {
+    await expect.poll(() => phoneInbox.length).toBeGreaterThan(index);
+    const message = decryptPairingMessage(phoneSecret, phoneInbox[index]);
+    if (!message) throw new Error(`the phone could not read message ${index}`);
+    return message;
+  };
+
+  phoneSend({
+    type: "offer",
+    version: 1,
+    confirmation: "desktop-code-v1",
+    session_id: bytesToHex(sessionId),
+  });
+  expect(await phoneRead(0)).toEqual({ type: "desktop-code" });
+  const codeNode = settings.getByTestId("pairing-code");
+  await expect(codeNode).toBeVisible();
+  const code = (await codeNode.getAttribute("data-code")) ?? "";
+  expect(code).toMatch(/^\d{6}$/);
+  await expect(settings.getByText("Enter the code on your phone").first()).toBeVisible();
+
+  phoneSend({
+    type: "code-submit",
+    code: code === "000000" ? "000001" : "000000",
+    request_id: "1",
+  });
+  expect(await phoneRead(1)).toEqual({
+    type: "code-rejected",
+    request_id: "1",
+    remaining_attempts: 4,
+  });
+
+  phoneSend({ type: "code-submit", code, request_id: "2" });
+  expect(await phoneRead(2)).toEqual({
+    type: "sas-confirm",
+    transcript_hash: bytesToHex(
+      deriveTranscriptHash(
+        sessionId,
+        decoded.sourcePubkey,
+        phonePubkey,
+        sas.sasInput,
+        decoded.sessionSecret,
+      ),
+    ),
+  });
+  const payload = await phoneRead(3);
+  if (payload.type !== "payload") throw new Error(`expected a payload, got ${payload.type}`);
+  expect(payload.payload_type).toBe("custom");
+  const identity = JSON.parse(payload.payload) as {
+    relayUrl: string;
+    pubkey: string;
+    nsec: string;
+  };
+  expect(identity.relayUrl).toBe("https://relay.example.com");
+  expect(identity.pubkey).toBe(claimedPubkey);
+  const secret = decodeNip19(identity.nsec);
+  if (secret.type !== "nsec") throw new Error("the payload nsec is not an nsec");
+  expect(getPublicKey(secret.data)).toBe(claimedPubkey);
+  await expect(
+    settings.getByTestId("pairing-panel").getByText("Pairing your phone…"),
+  ).toBeVisible();
+
+  phoneSend({ type: "complete", success: true });
+  await expect(settings.getByText("Paired", { exact: true }).first()).toBeVisible();
+  await expect(
+    settings.getByText("Your phone is signed in with this identity").first(),
+  ).toBeVisible();
 });
