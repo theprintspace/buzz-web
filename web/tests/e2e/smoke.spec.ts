@@ -1367,3 +1367,54 @@ test("invite download falls back for mobile and non-desktop devices", async ({ b
     await context.close();
   }
 });
+
+// TPS fork: an invite link must be redeemable in the browser on a machine with
+// neither the desktop app nor a NIP-07 extension, by creating an identity here.
+test("invite joins in the browser by creating an identity when no extension is installed", async ({
+  page,
+}) => {
+  let claimedPubkey = "";
+  await page.routeWebSocket(/.*/, () => {});
+  await page.route("**/api/join-policy", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
+  );
+  await page.route("**/api/invites/claim", async (route) => {
+    const request = route.request();
+    const body = request.postData() ?? "";
+    expect(JSON.parse(body)).toEqual({ code: "local-code" });
+    const authorization = request.headers().authorization ?? "";
+    expect(authorization).toMatch(/^Nostr /);
+    const event = JSON.parse(
+      Buffer.from(authorization.slice("Nostr ".length), "base64").toString("utf8"),
+    ) as { pubkey: string; kind: number; tags: string[][] };
+    claimedPubkey = event.pubkey;
+    expect(event.kind).toBe(27235);
+    expect(event.tags).toContainEqual(["u", request.url()]);
+    expect(event.tags).toContainEqual(["method", "POST"]);
+    expect(event.tags).toContainEqual(["payload", createHash("sha256").update(body).digest("hex")]);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: "joined",
+        community_id: "c",
+        host: "127.0.0.1",
+        role: "member",
+      }),
+    });
+  });
+
+  await page.goto("/invite/local-code");
+  await expect(page.getByRole("heading", { name: "You're invited to" })).toBeVisible();
+  await page.getByRole("button", { name: "Join in browser" }).click();
+
+  await expect(page.getByText(/Create a Buzz identity on this device/)).toBeVisible();
+  await page.getByRole("button", { name: "Create" }).click();
+  await page.getByLabel("New vault passphrase").fill("correct horse battery");
+  await page.getByLabel("Confirm passphrase").fill("correct horse battery");
+  await page.getByLabel(/I understand that Buzz cannot recover/).check();
+  await page.getByRole("button", { name: "Create" }).click();
+
+  await expect(page).toHaveURL("/");
+  expect(claimedPubkey).toMatch(/^[0-9a-f]{64}$/);
+});
